@@ -9,7 +9,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 # logger.setLevel(logging.DEBUG)
 
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name=environ['AWS_DEFAULT_REGION'])
 
 # change this to whatever your table name is
 table = dynamodb.Table('elasticsearch-backups')
