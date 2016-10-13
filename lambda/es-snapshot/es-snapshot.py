@@ -4,6 +4,7 @@ import json
 import requests
 import datetime
 import sys
+from os import environ
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
