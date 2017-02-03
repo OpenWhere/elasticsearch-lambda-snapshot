@@ -1,24 +1,14 @@
 import logging
-import boto3
 import json
 import requests
 import datetime
 import sys
 from os import environ
+from os import path
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 # logger.setLevel(logging.DEBUG)
-
-dynamodb = boto3.resource('dynamodb', region_name=environ['AWS_DEFAULT_REGION'])
-
-# change this to whatever your table name is
-table = dynamodb.Table('elasticsearch-backups')
-
-# I don't fully understand the reason for this. Following example
-# http://docs.aws.amazon.com/amazondynamodb/latest/gettingstartedguide/GettingStarted.Python.04.html
-pe = "#dmn, #pth, #bkt"
-ean = {"#dmn": "domain", "#pth": "path", "#bkt": "bucket"}
 
 
 # This is the method that will be registered
@@ -28,61 +18,54 @@ def handler(event={}, context={}):
 
     logger.info("started")
 
-    logger.info("scanning table")
-    nodes = table.scan(
-        ProjectionExpression=pe,
-        ExpressionAttributeNames=ean
-        )
+    logger.info("getting environment variables")
+    # TODO: get variables here
+    domain = environ['URL'].strip('/ ')
+    bucket = environ['BUCKET'].strip()
+    basePath = environ['ROOT_PATH'].strip('/ ')
 
-    logger.info("nodes are " + str(nodes))
-
-    for i in nodes['Items']:
-        bucket = str(i['bucket'])
-        path = str(i['path'])
-
-        logger.info("bucket is " + str(i['bucket']))
-        logger.info("base_path is " + str(i['path']))
-
-        logger.info("setting repository json")
-        repository = {
-            "type": "s3",
-            "settings": {
-                "bucket": bucket,
-                "base_path": path
-            }
+    logger.info("setting repository json")
+    repository = {
+        "type": "s3",
+        "settings": {
+            "bucket": bucket,
+            "base_path": path.join("/", basePath, "")
         }
-        logger.info("repository json is " + json.dumps(repository))
+    }
+    logger.info("repository json is " + json.dumps(repository))
 
-        logger.info("setting url path")
-        url = i['domain'] + "/_snapshot/lambda_s3_repository"
-        logger.info("url path is " + url)
+    logger.info("setting url path")
+    url = path.join(domain, "_snapshot/lambda_s3_repository")
+    logger.info("url path is " + url)
 
-        # create repository
-        logger.info("creating repository")
-        try:
-            response = requests.put(
-                url,
-                data=json.dumps(repository)
-                )
-        except requests.exceptions.RequestException as e:
-            logger.error(e)
-            sys.exit(1)
+    # create repository
+    logger.info("creating repository")
+    try:
+        response = requests.put(
+            url,
+            data=json.dumps(repository)
+            )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(e)
+        logger.error(response.content)
+        sys.exit(1)
 
-        logger.info(response.content)
+    logger.info(response.content)
 
-        # start snapshot
-        logger.info("starting snapshot")
-        url = url + "/" + str(now.strftime("%Y-%m-%dt%H:%M"))
-        try:
-            response = requests.put(
-                url
-                )
-        except requests.exceptions.RequestException as e:
-            logger.error(e)
-            sys.exit(2)
+    # start snapshot
+    logger.info("starting snapshot")
+    url = path.join(url, str(now.strftime("%Y-%m-%dt%H:%M")))
+    try:
+        response = requests.put(url)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(e)
+        logger.error(response.content)
+        sys.exit(2)
 
-        logger.info(response.content)
-        logger.info("new snapshot started at " + url)
+    logger.info(response.content)
+    logger.info("new snapshot started at " + url)
 
 
 # If being called locally, just call handler

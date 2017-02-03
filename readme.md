@@ -1,24 +1,25 @@
 # elasticsearch-lambda-snapshots
 
-es-snapshot is an AWS Lambda function for use with Lambder.
+Uses AWS Lambda to take snapshots of an Elasticsearch cluster
 
-Uses AWS Lambda to take snapshots of Elasticsearch clusters based on records in a Dynamo table
+## Configuration
+This Lambda is configured with the following environment variables:
 
-Each entry in the Dynamo table needs to have the following three keys:
-
-| domain                    | bucket         | path                 |
-| :------------------------ | :------------- | :------------------- |
-| http(s)://domain.com:port | s3-bucket-name | /path/for/snapshots/ |
-
-When triggered, the function will loop over all entries in the table, register an S3 repository named `s3_repository` and initiate a full snapshot.
+    URL="http://elasticsearch.mydomain.com:9200"
+    BUCKET="mybucket"
+    ROOT_PATH="/mycluster/"
 
 ## Getting Started
-
 1.  Test the lambda function
-        python lambda/es-snapshot/es-snapshot.py
+  1.  Set environment variables
+            export URL="http://elasticsearch.mydomain.com:9200"
+            export BUCKET="mybucket"
+            export ROOT_PATH="/path/for/backup/storage/"
+  2.  Run lambda
+            python lambda/es-snapshot/es-snapshot.py
 2.  create zip
         ./build.sh
-3.  Create Lambda function using zip file.
+3.  Create Lambda function using zip file. **Must pass environment variables** (Automated in pod config)
 
 ## Notes
 1. The iam and input dirs, as well as lambder.json are for use by Lambder. You can use Lambder for testing, but it is not part of our workflow at this time.
